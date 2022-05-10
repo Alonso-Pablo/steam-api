@@ -2,7 +2,9 @@ import type { NextPage } from 'next'
 import Head from 'next/head'
 import Image from 'next/image'
 import { useState } from 'react'
+import OwnedGamesList from '../components/steam/OwnedGamesList'
 import styles from '../styles/Home.module.css'
+import { OwnedGameSteamBackendInterface, OwnedGameInterface } from '../ts'
 
 interface GamePlayedInterface {
   appId: number;
@@ -22,7 +24,7 @@ interface ProfileInterface {
   profileUrl: string | null;
   locCountryCode: string | null;
   gameCount: 0;
-  games: GamePlayedInterface[];
+  games: OwnedGameInterface[];
 }
 
 interface ProfileBackendInterface {
@@ -47,18 +49,7 @@ interface ProfileBackendInterface {
   locstatecode: string;
 }
 
-interface GameListSteamBackendInterface {
-  appid: number;
-  playtime_forever: number;
-  playtime_windows_forever: number;
-  playtime_mac_forever: number;
-  playtime_linux_forever: number;
-}
 
-interface OwnedGamesBackendInterface {
-  game_count: number;
-  games: GameListSteamBackendInterface[]
-}
 
 const Home: NextPage = () => {
   const profile: ProfileInterface = {
@@ -91,7 +82,15 @@ const Home: NextPage = () => {
      */
     const userOwnedGamesResponse = await fetch(`${baseUrl}/api/contexts/steam/owned-games/${userId}`)
     const { response: { game_count: gameCount, games} } = await userOwnedGamesResponse.json()
-    
+    const allGames = games.map((game: OwnedGameSteamBackendInterface)=> ({
+      appId: game.appid,
+      playTime: {
+        total: game.playtime_forever,
+        windows: game.playtime_windows_forever,
+        mac: game.playtime_mac_forever,
+        linux: game.playtime_linux_forever,
+      }
+    }))
 
     setUserProfile({
       steamId: userProfile.steamid,
@@ -102,7 +101,7 @@ const Home: NextPage = () => {
       profileUrl: userProfile.profileurl,
       locCountryCode: userProfile.loccountrycode,
       gameCount,
-      games,
+      games: allGames,
     })
   }
 
@@ -154,21 +153,12 @@ const Home: NextPage = () => {
             <p>
               Total de juegos: <span>{userProfile.gameCount || '-'}</span>
             </p>
-            <p>
-              Juegos:
-              <>
-                {() => userProfile.games.map((game, index) =>
-                  <div key={index}>
-                    <p>
-                      AppId: <span>{game.appId}</span>
-                    </p>
-                    <p>
-                      Tiempo jugado: <span>{game.playTime.total}</span>
-                    </p>
-                  </div>
-                )}
-              </>
-            </p>
+            <div>
+              <p>Juegos:</p>
+              {userProfile.gameCount &&
+               <OwnedGamesList games={userProfile.games}/>
+              }
+            </div>
           </section>
       </main>
 
